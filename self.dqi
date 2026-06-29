@@ -1,0 +1,47 @@
+import numpy as np
+
+class ActionKernel:
+    def __init__(self, dqi_score, model_prob, market_odds):
+        self.dqi = dqi_score
+        self.model_p = model_prob
+        self.odds = market_odds
+        self.market_p = 1 / market_odds
+        
+    def bayesian_adjustment(self):
+        # Weight allocation based on Data Quality Index (DQI)
+        if self.dqi >= 90:
+            model_weight, market_weight = 0.85, 0.15
+        elif self.dqi >= 80:
+            model_weight, market_weight = 0.80, 0.20
+        elif self.dqi >= 70:
+            model_weight, market_weight = 0.70, 0.30
+        else:
+            return 0 # No Bet Zone
+            
+        # Bayesian Synthesis
+        adjusted_p = (self.model_p * model_weight) + (self.market_p * market_weight)
+        return adjusted_p
+
+    def monte_carlo_simulation(self, iterations=10000):
+        # Simulating variance to test robustness of the adjusted probability
+        simulated_results = np.random.binomial(1, self.bayesian_adjustment(), iterations)
+        return np.mean(simulated_results)
+
+    def calculate_ev(self, final_prob):
+        # Expected Value calculation
+        ev = (final_prob * self.odds) - 1
+        return ev
+        
+    def evaluate_bet(self):
+        adj_p = self.bayesian_adjustment()
+        final_p = self.monte_carlo_simulation()
+        ev = self.calculate_ev(final_p)
+        value_edge = final_p - self.market_p
+        
+        if ev >= 0.05 and value_edge >= 0.05 and self.dqi >= 80:
+            return f"BET APPROVED | EV: {ev:.3f} | Edge: {value_edge:.2%}"
+        return f"NO BET | EV: {ev:.3f} | Edge: {value_edge:.2%}"
+
+# Example Execution
+match_decision = ActionKernel(dqi_score=85, model_prob=0.65, market_odds=1.90)
+print(match_decision.evaluate_bet())
